@@ -4,31 +4,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "commons.h"
+
 typedef struct api_hashmap ApiHashmap;
-typedef enum Option {
-    None,
-    Some,
-} Option;
-
-typedef struct element {
-    // Owned by the hashmap. Do not free or modify this pointer.
-    const char* key;
-    int value;
-} Element;
-
-// Optional containing an Element stored by value.
-// The key pointer is still owned by the hashmap.
-typedef struct Option_Element_v {
-    Option option;
-    Element element_v;
-} Option_Element_v;
-
-// Optional containing an Element stored as a pointer.
-// The pointer is invalid after destroy and may be invalid after resize.
-typedef struct Option_Element_p {
-    Option option;
-    Element* element_p;
-} Option_Element_p;
 
 typedef struct ApiHashmapProbeStats {
     uint64_t insertion_ops;
@@ -56,7 +34,7 @@ Option_Element_p retrieve_element_api_hashmap(const ApiHashmap* hashmap, const c
 /// Returns by value the Element associated to `key`, safe for storage. Value is none if the element is not present
 Option_Element_v retrieve_element_value_api_hashmap(const ApiHashmap* hashmap, const char* key);
 
-/// Inserts or updates an element and returns the stored value. Returns NULL if allocation fails.
+/// Inserts or updates an element and returns the stored value, returns NULL if allocation fails
 ///
 /// This function uses `linear probing`
 Element* insert_element_api_hashmap(ApiHashmap* hashmap, const char* key, int value);
@@ -67,7 +45,7 @@ bool resize_api_hashmap(ApiHashmap* hashmap);
 size_t api_hashmap_size(const ApiHashmap* hashmap);
 size_t api_hashmap_capacity(const ApiHashmap* hashmap);
 
-/// Probe counters are updated only when compiled with HASHMAP_COUNT_PROBES.
+/// Probe counters are updated only when compiled with HASHMAP_COUNT_PROBES
 void api_hashmap_reset_probe_stats(ApiHashmap* hashmap);
 ApiHashmapProbeStats api_hashmap_probe_stats(const ApiHashmap* hashmap);
 
@@ -76,4 +54,4 @@ bool is_some(Option op);
 /// Returns true if op is None, false otherwise
 bool is_none(Option op);
 
-#endif //HASHMAPS_API_HASHMAP_H
+#endif
