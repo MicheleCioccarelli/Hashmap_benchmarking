@@ -35,7 +35,14 @@ uint64_t _siphash_2_4_64(const void* input, size_t length, const uint8_t key[SIP
 /// The hashed input is the fixed size probe_number followed by the key bytes
 /// The function does not choose a subarray, the caller reduces the returned value using the appropriate subarray lenght
 /// Use the same seed for every probe in the same benchmark run
+/// element_key must be a null terminated string and must remain valid during the call
+/// Returns the raw 64 bit hash value before it is reduced to a table index
 uint64_t siphash_probe64(const char* element_key, uint64_t probe_number, const uint8_t seed[SIPHASH_2_4_KEY_SIZE]);
+
+/// Implements the injection phi(i, j)
+/// The returned global probe number can be passed directly to siphash_probe64
+/// Returns zero when an argument is zero or when phi(i, j) does not fit in 64 bits
+uint64_t elastic_phi(uint64_t subarray_number, uint64_t local_probe_number);
 
 /// Warning: this is not designed to be expanding, probably none of them should but oh well
 typedef struct ElasticHashmap {
@@ -49,8 +56,12 @@ typedef struct ElasticHashmap {
 /// It records the starting index (from the big main array), and its lenght (so the end is start+lenght)
 /// as well as the current size, for vacancy calculations
 typedef struct ElasticSubArray {
+    // One-based i used by phi(i, j)
+    int subarray_number;
     int starting_index;
-    int lenght;
+    // capacity
+    int length;
+    // How many of the key spots are occupied
     int size;
 } ElasticSubArray;
 
@@ -66,11 +77,20 @@ ElasticSubArray* partition_elastic_hashmap(int capacity);
 /// Each insertion is divided in batches, ...
 ///
 /// delta^-1 is supposed to be a power of 2 for optimal results
-void batch_insert(ElasticHashmap* hashmap, float delta, Element* elements);
+/// elements must contain at least the number of elements required by the batches
+/// The function consumes the element pointers it successfully inserts
+/// elements must be an array of pointers owned by the caller
+/// Successfully inserted pointers are set to NULL in the input array
+/// seed must remain valid for the complete insertion run and must be reused during lookup
+/// The implementation performs batch B0 and the following batches from the paper
+void batch_insert(ElasticHashmap* hashmap, float delta, Element** elements, const uint8_t seed[SIPHASH_2_4_KEY_SIZE]);
 
+/// Frees every element and table owned by hashmap
 void delete_elastic_hashmap(ElasticHashmap* hashmap);
 
-// Inserts element in subarray using the first available slot, the caller's element pointer should then be invalidated
-bool subarray_greedy_insert(Element** table, ElasticSubArray* subarray, Element* element);
+/// Inserts element into the first available slot
+/// The caller transfers ownership of element when this function returns true
+/// Returns true when element was inserted succesfully and false when the arguments are invalid or the subarray is full
+bool insert_first_available(Element** table, ElasticSubArray* subarray, Element* element, const uint8_t seed[SIPHASH_2_4_KEY_SIZE]);
 
 #endif
