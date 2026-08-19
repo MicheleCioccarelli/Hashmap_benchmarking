@@ -1,6 +1,8 @@
 #ifndef HASHMAPS_COMMONS_H
 #define HASHMAPS_COMMONS_H
 
+#define SIPHASH_2_4_KEY_SIZE 16
+
 typedef enum Option {
     None,
     Some,

@@ -2,4 +2,14 @@
 .idea/
 cmake-build-*/
 API_REPORT.md
+ELASTIC_LOOKUP_EXPLANATION.md
+ELASTIC_HASHING_REPORT.md
+FUNNEL_HASHING_REPORT.md
+WORDLIST_RUNNER_REPORT.md
+IMPLEMENTATION_AUDIT.md
+PROFESSOR_UPDATE.md
+elastic_benchmark_report.txt
+funnel_benchmark_report.txt
+proposals.md
 tests/
+benchmark-results/
