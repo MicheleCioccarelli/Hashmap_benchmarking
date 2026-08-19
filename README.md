@@ -79,10 +79,12 @@ La wordlist viene separata sui caratteri di spaziatura riconosciuti da `isspace`
 | `--demo <mode>` | chiavi generate deterministiche | 65536 | quattro delta standard | tabella compatta |
 | `--demo <mode> <delta> [seed]` | chiavi generate deterministiche | 1024 | un solo delta | diagnostica dettagliata |
 | `--c-sweep [delta] [seed]` | stesse chiavi generate a ogni punto | 16384 | `c = 0.25, 0.5, 1, 2, 4, 8, 16, 100` | tabella Elastic compatta |
+| `--elastic-lookup-comparison <wordlist> [max] [delta] [seed]` | prefisso della wordlist deduplicata | massima potenza di due fino a `max`, default 4096 | tre lookup sulla stessa tabella Elastic | tabella comparativa |
 | `--csv-wordlist-sweep <wordlist> [max] [seed]` | stesso protocollo di `--wordlist-sweep` | stessa selezione automatica | quattro delta standard | CSV |
 | `--csv-wordlist <wordlist> <mode> [delta] [seed]` | stesso protocollo del test wordlist singolo | calcolata dalla wordlist | un solo delta | CSV |
 | `--csv-load-sweep <mode> [seed]` | stesso protocollo di `--demo` senza delta | 65536 | quattro delta standard | CSV |
 | `--csv-c-sweep [delta] [seed]` | stesso protocollo di `--c-sweep` | 16384 | otto valori di c | CSV |
+| `--csv-elastic-lookup-comparison <wordlist> [max] [delta] [seed]` | stesso protocollo del confronto lookup | stessa selezione automatica | tre lookup sulla stessa tabella Elastic | CSV |
 
 
 ## Delta sulla stessa wordlist
@@ -143,6 +145,24 @@ Sweep della costante Elastic `c` sui valori da 0.25 a 100, con capacita 16384:
 ./cmake-build-release/HashMapsProbes --c-sweep 0.125
 ```
 
+## Confronto lookup Elastic
+
+Questo benchmark costruisce una sola tabella Elastic e cerca le stesse chiavi con tre sequenze:
+
+- `phi-aware` e il lookup corrente che ricostruisce i draw locali tramite l'inversa di `phi`
+- `full-table-siphash` usa `SipHash(key, k) % capacity` per ogni probe e permette ripetizioni
+- `modular-double-hash` e il precedente approccio modulare: deriva partenza e passo da SipHash e rende il passo coprimo con la capacita, visitando ogni slot una sola volta
+
+Il benchmark richiede `HashMapsProbes` e usa una capacita massima predefinita di 4096 perche i due lookup ciechi possono fare lavoro quadratico sul totale delle chiavi cercate:
+
+```
+./cmake-build-release/HashMapsProbes --elastic-lookup-comparison path/to/wordlist.txt 4096 0.125
+```
+
+La riga `insertion probes` descrive il costo della singola costruzione Elastic condivisa dai tre metodi. `positive total`, `positive avg` e `positive max` descrivono i lookup delle chiavi presenti. `before / at / after phi` separa i lookup che trovano la chiave prima, esattamente a oppure oltre l'indice globale `phi(i,j)` ricostruito dalla collocazione. Per `phi-aware`, non avere risultati dopo `phi` controlla l'invariante che collega inserzione e lookup, ma da solo non dimostra i limiti asintotici del paper. Tutti i valori di `k` attraversati contano come probe, inclusi quelli fuori dall'immagine di `phi`. `avg / n` divide la media dei probe positivi per la capacita. `negative probes` misura separatamente una chiave assente
+
+Per controllare la scalabilita rispetto a `n` bisogna ripetere il comando con la stessa wordlist, delta e seed cambiando soltanto la capacita massima, per esempio 512, 1024, 2048 e 4096
+
 ## CSV
 
 I comandi CSV stampano soltanto intestazione e dati su standard output, quindi possono essere salvati direttamente:
@@ -152,6 +172,7 @@ mkdir -p benchmark-results
 ./cmake-build-release/HashMapsProbes --csv-load-sweep all > benchmark-results/load-sweep.csv
 ./cmake-build-release/HashMapsProbes --csv-c-sweep 0.125 > benchmark-results/c-sweep.csv
 ./cmake-build-release/HashMapsProbes --csv-wordlist-sweep path/to/wordlist.txt 65536 > benchmark-results/wordlist-sweep.csv
+./cmake-build-release/HashMapsProbes --csv-elastic-lookup-comparison path/to/wordlist.txt 4096 0.125 > benchmark-results/elastic-lookup-comparison.csv
 ```
 
 Per misurare i tempi usare gli stessi comandi con `HashMaps`. In quella build le colonne dei probe rimangono vuote e `probe_counting` vale zero

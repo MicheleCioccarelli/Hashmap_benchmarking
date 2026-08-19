@@ -70,4 +70,13 @@ int run_elastic_c_sweep(int capacity, float delta, const uint8_t seed[SIPHASH_2_
 /// Probe fields are empty unless the complete program is built with HASHMAP_COUNT_PROBES
 int run_elastic_c_sweep_csv(int capacity, float delta, const uint8_t seed[SIPHASH_2_4_KEY_SIZE]);
 
+/// Compares the current Elastic lookup with blind full-table SipHash and a modular double-hash permutation
+/// Every method searches the same Elastic table built from a prefix of the supplied wordlist
+/// maximum_capacity limits the quadratic work performed by the two blind positive lookup strategies
+/// The benchmark requires a build with HASHMAP_COUNT_PROBES and reports insertion cost and whether each lookup finishes before, at or after placement phi
+int run_wordlist_elastic_lookup_comparison(const char* path, int maximum_capacity, float delta, const uint8_t seed[SIPHASH_2_4_KEY_SIZE]);
+
+/// Runs the same Elastic lookup comparison and prints one CSV row for every lookup strategy
+int run_wordlist_elastic_lookup_comparison_csv(const char* path, int maximum_capacity, float delta, const uint8_t seed[SIPHASH_2_4_KEY_SIZE]);
+
 #endif

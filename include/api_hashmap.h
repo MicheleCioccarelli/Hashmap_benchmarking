@@ -38,8 +38,8 @@ ApiHashmap* create_api_hashmap(void);
 void destroy_api_hashmap(ApiHashmap* hashmap);
 
 /// Returns a pointer to the Element stored in the map with `key` if it exists, otherwise the optional will be None
-/// This is dangerous: whenever the table changes size, all the old pointers will be invalid.
-/// Only use this if you are modifying this pointer right away and then discarding it
+/// The pointer remains valid across resize because the Element itself is not moved
+/// The pointer becomes invalid when the hashmap is destroyed
 Option_Element_p retrieve_element_api_hashmap(const ApiHashmap* hashmap, const char* key);
 
 /// Returns by value the Element associated to `key`, safe for storage. Value is none if the element is not present

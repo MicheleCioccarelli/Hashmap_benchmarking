@@ -17,6 +17,7 @@ static const uint8_t DEFAULT_BENCHMARK_SEED[SIPHASH_2_4_KEY_SIZE] = {
 
 static const int DEFAULT_LOAD_SWEEP_CAPACITY = 65536;
 static const int DEFAULT_C_SWEEP_CAPACITY = 16384;
+static const int DEFAULT_LOOKUP_COMPARISON_CAPACITY = 4096;
 
 /// Converts the mode name used on the command line into the corresponding mode bits
 static bool parse_mode(const char* text, WordlistHashmapMode* mode) {
@@ -120,6 +121,8 @@ static void print_usage(const char* program_name) {
     fprintf(stderr, "       %s --c-sweep [delta] [32-hex-digit-seed]\n", name);
     fprintf(stderr, "       %s --csv-load-sweep <standard|elastic|funnel|both|funnel-control|all> [32-hex-digit-seed]\n", name);
     fprintf(stderr, "       %s --csv-c-sweep [delta] [32-hex-digit-seed]\n", name);
+    fprintf(stderr, "       %s --elastic-lookup-comparison <wordlist> [maximum-capacity] [delta] [32-hex-digit-seed]\n", name);
+    fprintf(stderr, "       %s --csv-elastic-lookup-comparison <wordlist> [maximum-capacity] [delta] [32-hex-digit-seed]\n", name);
     fprintf(stderr, "words are separated by whitespace and duplicate words are ignored\n");
     fprintf(stderr, "one wordlist argument runs all maps at the four standard load factors\n");
     fprintf(stderr, "--demo without delta runs the default high-load sweep\n");
@@ -133,6 +136,30 @@ int run_benchmark_cli(const int argc, char** argv) {
         uint8_t seed[SIPHASH_2_4_KEY_SIZE];
         memcpy(seed, DEFAULT_BENCHMARK_SEED, sizeof(seed));
         return run_wordlist_load_sweep(argv[1], DEFAULT_LOAD_SWEEP_CAPACITY, WordlistAll, seed);
+    }
+
+    if (argc >= 2 && (strcmp(argv[1], "--elastic-lookup-comparison") == 0 || strcmp(argv[1], "--csv-elastic-lookup-comparison") == 0)) {
+        if (argc < 3 || argc > 6) {
+            print_usage(argc > 0 ? argv[0] : NULL);
+            return 1;
+        }
+        int maximum_capacity = DEFAULT_LOOKUP_COMPARISON_CAPACITY;
+        if (argc >= 4 && !parse_capacity(argv[3], &maximum_capacity)) {
+            print_usage(argv[0]);
+            return 1;
+        }
+        float delta = 0.125f;
+        if (argc >= 5 && !parse_delta(argv[4], &delta)) {
+            print_usage(argv[0]);
+            return 1;
+        }
+        uint8_t seed[SIPHASH_2_4_KEY_SIZE];
+        memcpy(seed, DEFAULT_BENCHMARK_SEED, sizeof(seed));
+        if (argc == 6 && !parse_seed_hex(argv[5], seed)) {
+            print_usage(argv[0]);
+            return 1;
+        }
+        return strcmp(argv[1], "--csv-elastic-lookup-comparison") == 0 ? run_wordlist_elastic_lookup_comparison_csv(argv[2], maximum_capacity, delta, seed) : run_wordlist_elastic_lookup_comparison(argv[2], maximum_capacity, delta, seed);
     }
 
     if (argc >= 2 && (strcmp(argv[1], "--wordlist-sweep") == 0 || strcmp(argv[1], "--csv-wordlist-sweep") == 0)) {

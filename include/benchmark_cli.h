@@ -7,6 +7,8 @@
 /// --wordlist-sweep and --csv-wordlist-sweep accept an optional maximum capacity and seed
 /// --demo without delta runs the default high-load comparison for the selected implementation
 /// --c-sweep compares finite Elastic c values and does not take an implementation mode
+/// --elastic-lookup-comparison compares phi-aware, full-table and modular double-hash lookup on one Elastic table
+/// The lookup comparison accepts a wordlist followed by optional maximum capacity, delta and seed
 /// The csv commands run the corresponding benchmark with stable comma-separated output
 /// For wordlists and --demo, argv[2] selects the hashmap implementation
 /// argv[3] may contain delta and argv[4] may contain the SipHash seed

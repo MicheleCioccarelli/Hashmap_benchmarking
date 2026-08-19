@@ -35,7 +35,7 @@ typedef struct FunnelHashMap {
 /// Index-based representation of the bucket containers (A_1, A_2, ...)
 /// Each bucket is \beta long, so when traversing each member of this array is a step of \beta
 /// in the actual array which contains the table
-/// ending_indexes starting_index + \beta*n_buckets (hope fence post problme doesn't bite me in the ass)
+/// ending_indexes starting_index + \beta*n_buckets (hope fence post problme doesn't bite me)
 typedef struct Funnel_A_i {
     int subarray_number;
     int starting_index;

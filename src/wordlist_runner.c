@@ -61,6 +61,34 @@ typedef struct BenchmarkMeasurement {
     uint64_t funnel_insertion_failures;
 } BenchmarkMeasurement;
 
+typedef enum ElasticLookupComparisonMethod {
+    ElasticLookupPhiAware,
+    ElasticLookupFullTable,
+    ElasticLookupDoubleHash,
+} ElasticLookupComparisonMethod;
+
+typedef struct ElasticLookupResult {
+    Option_Element_p element;
+    uint64_t probes;
+    bool completed;
+} ElasticLookupResult;
+
+typedef struct ElasticLookupComparisonMeasurement {
+    const char* method;
+    uint64_t insertion_operations;
+    uint64_t insertion_probes;
+    uint64_t insertion_maximum;
+    size_t found;
+    uint64_t positive_probes;
+    uint64_t positive_maximum;
+    size_t before_phi;
+    size_t exactly_at_phi;
+    size_t after_phi;
+    size_t phi_references;
+    uint64_t negative_probes;
+    bool negative_completed;
+} ElasticLookupComparisonMeasurement;
+
 /// Frees every word and resets the wordlist to an empty state
 static void delete_wordlist(WordList* wordlist) {
     if (wordlist == NULL) {
@@ -399,6 +427,110 @@ static int* elastic_positions_by_value(const ElasticHashmap* hashmap, const size
     return positions;
 }
 
+/// Returns the greatest common divisor used to build a full-table modular permutation
+static uint64_t lookup_greatest_common_divisor(uint64_t left, uint64_t right) {
+    while (right != 0) {
+        const uint64_t remainder = left % right;
+        left = right;
+        right = remainder;
+    }
+    return left;
+}
+
+/// Runs the current phi-aware lookup and reads the probe count recorded for that one operation
+static ElasticLookupResult run_phi_aware_lookup(ElasticHashmap* hashmap, const char* key, const uint8_t seed[SIPHASH_2_4_KEY_SIZE]) {
+    elastic_hashmap_reset_probe_stats(hashmap);
+    const Option_Element_p element = retrieve_element_elastic_hashmap(hashmap, key, seed);
+    const ElasticHashmapProbeStats stats = elastic_hashmap_probe_stats(hashmap);
+    return (ElasticLookupResult){.element = element, .probes = stats.lookup_probes, .completed = is_some(element.option) || stats.lookup_probes > 0};
+}
+
+/// Runs the earlier blind strategy where every k is reduced over the complete physical table
+static ElasticLookupResult run_full_table_lookup(const ElasticHashmap* hashmap, const char* key, const uint8_t seed[SIPHASH_2_4_KEY_SIZE]) {
+    const size_t visited_size = ((size_t)hashmap->capacity + 7) / 8;
+    uint8_t* visited_positions = calloc(visited_size, sizeof(uint8_t));
+    if (visited_positions == NULL) {
+        return (ElasticLookupResult){.element = {.option = None, .element_p = NULL}, .probes = 0, .completed = false};
+    }
+
+    ElasticLookupResult result = {.element = {.option = None, .element_p = NULL}, .probes = 0, .completed = false};
+    int remaining_positions = hashmap->capacity;
+    for (uint64_t global_probe_number = 1; remaining_positions > 0; global_probe_number++) {
+        const int table_index = (int)(siphash_probe64(key, global_probe_number, seed) % (uint64_t)hashmap->capacity);
+        result.probes++;
+        Element* candidate = hashmap->table[table_index];
+        if (candidate != NULL && strcmp(candidate->key, key) == 0) {
+            result.element = (Option_Element_p){.option = Some, .element_p = candidate};
+            result.completed = true;
+            break;
+        }
+
+        const size_t byte_index = (size_t)table_index / 8;
+        const uint8_t bit_mask = (uint8_t)(1u << (table_index % 8));
+        if ((visited_positions[byte_index] & bit_mask) == 0) {
+            visited_positions[byte_index] |= bit_mask;
+            remaining_positions--;
+        }
+        if (global_probe_number == UINT64_MAX) {
+            break;
+        }
+    }
+    if (remaining_positions == 0) {
+        result.completed = true;
+    }
+
+    free(visited_positions);
+    return result;
+}
+
+/// Runs a double-hash permutation whose step is adjusted until it is coprime with the capacity
+static ElasticLookupResult run_double_hash_lookup(const ElasticHashmap* hashmap, const char* key, const uint8_t seed[SIPHASH_2_4_KEY_SIZE]) {
+    const uint64_t capacity = (uint64_t)hashmap->capacity;
+    uint64_t table_index = siphash_probe64(key, 1, seed) % capacity;
+    uint64_t step = siphash_probe64(key, 2, seed) % capacity;
+    step = step == 0 ? 1 : step;
+    while (lookup_greatest_common_divisor(step, capacity) != 1) {
+        step++;
+        if (step == capacity) {
+            step = 1;
+        }
+    }
+
+    ElasticLookupResult result = {.element = {.option = None, .element_p = NULL}, .probes = 0, .completed = true};
+    for (int checked = 0; checked < hashmap->capacity; checked++) {
+        result.probes++;
+        Element* candidate = hashmap->table[table_index];
+        if (candidate != NULL && strcmp(candidate->key, key) == 0) {
+            result.element = (Option_Element_p){.option = Some, .element_p = candidate};
+            return result;
+        }
+        table_index = (table_index + step) % capacity;
+    }
+    return result;
+}
+
+/// Selects one of the three lookup strategies measured by the comparison benchmark
+static ElasticLookupResult run_comparison_lookup(ElasticHashmap* hashmap, const ElasticLookupComparisonMethod method, const char* key, const uint8_t seed[SIPHASH_2_4_KEY_SIZE]) {
+    if (method == ElasticLookupPhiAware) {
+        return run_phi_aware_lookup(hashmap, key, seed);
+    }
+    if (method == ElasticLookupFullTable) {
+        return run_full_table_lookup(hashmap, key, seed);
+    }
+    return run_double_hash_lookup(hashmap, key, seed);
+}
+
+/// Returns the stable output name used for one comparison strategy
+static const char* elastic_lookup_method_name(const ElasticLookupComparisonMethod method) {
+    if (method == ElasticLookupPhiAware) {
+        return "phi-aware";
+    }
+    if (method == ElasticLookupFullTable) {
+        return "full-table-siphash";
+    }
+    return "modular-double-hash";
+}
+
 /// Prints the final occupancy and vacancy of every physical Elastic subarray
 static void print_elastic_occupancy(const ElasticHashmap* hashmap, const double delta) {
     ElasticSubArray* subarrays = partition_elastic_hashmap(hashmap->capacity);
@@ -609,6 +741,163 @@ static void print_csv_measurement(const BenchmarkMeasurement* measurement) {
     print_csv_double_field(is_funnel, log_delta_squared + log_log_capacity);
     print_csv_double_field(is_funnel, measurement->delta * (double)measurement->capacity / 8.0);
     putchar('\n');
+}
+
+#if defined(HASHMAP_COUNT_PROBES) && HASHMAP_COUNT_PROBES
+/// Prints the readable columns used by the Elastic lookup comparison
+static void print_elastic_lookup_comparison_header(const char* dataset, const int capacity, const size_t key_count, const float delta, const ElasticHashmapProbeStats* insertion_stats) {
+    printf("\n[elastic lookup comparison: %s, capacity %d, keys %zu, delta %.8f]\n", dataset, capacity, key_count, (double)delta);
+    printf("insertion probes: %llu total, %.3f average, %llu maximum\n", (unsigned long long)insertion_stats->insertion_probes, probes_per_operation(insertion_stats->insertion_probes, insertion_stats->insertion_ops), (unsigned long long)insertion_stats->maximum_insertion_probes);
+    printf("%-24s | %-13s | %-14s | %-12s | %-10s | %-10s | %-28s | %s\n", "method", "found", "positive total", "positive avg", "positive max", "avg / n", "before / at / after phi", "negative probes");
+    printf("-------------------------+---------------+----------------+--------------+------------+------------+------------------------------+----------------\n");
+}
+
+/// Prints one readable Elastic lookup comparison result
+static void print_elastic_lookup_comparison_measurement(const ElasticLookupComparisonMeasurement* measurement, const size_t key_count, const int capacity) {
+    char found[32];
+    char phi_relation[64];
+    char negative[32];
+    const double average = key_count == 0 ? 0.0 : (double)measurement->positive_probes / (double)key_count;
+    snprintf(found, sizeof(found), "%zu / %zu", measurement->found, key_count);
+    snprintf(phi_relation, sizeof(phi_relation), "%zu / %zu / %zu", measurement->before_phi, measurement->exactly_at_phi, measurement->after_phi);
+    if (measurement->negative_completed) {
+        snprintf(negative, sizeof(negative), "%llu", (unsigned long long)measurement->negative_probes);
+    } else {
+        snprintf(negative, sizeof(negative), "incomplete");
+    }
+    printf("%-24s | %-13s | %14llu | %12.3f | %10llu | %10.6f | %-28s | %s\n", measurement->method, found, (unsigned long long)measurement->positive_probes, average, (unsigned long long)measurement->positive_maximum, average / (double)capacity, phi_relation, negative);
+}
+
+/// Prints the stable CSV heading used by the Elastic lookup comparison
+static void print_elastic_lookup_comparison_csv_header(void) {
+    printf("method,dataset,capacity,keys,delta,insertion_operations,insertion_probes,insertion_probe_average,insertion_probe_maximum,found,positive_probes,positive_probe_average,positive_probe_maximum,positive_average_over_capacity,before_phi,exactly_at_phi,after_phi,at_or_before_phi,phi_references,at_or_before_phi_percentage,negative_probes,negative_completed\n");
+}
+
+/// Prints one CSV row from the Elastic lookup comparison
+static void print_elastic_lookup_comparison_csv_measurement(const ElasticLookupComparisonMeasurement* measurement, const char* dataset, const size_t key_count, const int capacity, const float delta) {
+    const double average = key_count == 0 ? 0.0 : (double)measurement->positive_probes / (double)key_count;
+    const double insertion_average = probes_per_operation(measurement->insertion_probes, measurement->insertion_operations);
+    const size_t at_or_before_phi = measurement->before_phi + measurement->exactly_at_phi;
+    const double within_percentage = measurement->phi_references == 0 ? 0.0 : 100.0 * (double)at_or_before_phi / (double)measurement->phi_references;
+    printf("%s", measurement->method);
+    print_csv_string_field(dataset);
+    printf(",%d,%zu,%.9f,%llu,%llu,%.9f,%llu,%zu,%llu,%.9f,%llu,%.9f,%zu,%zu,%zu,%zu,%zu,%.9f,%llu,%d\n", capacity, key_count, (double)delta, (unsigned long long)measurement->insertion_operations, (unsigned long long)measurement->insertion_probes, insertion_average, (unsigned long long)measurement->insertion_maximum, measurement->found, (unsigned long long)measurement->positive_probes, average, (unsigned long long)measurement->positive_maximum, average / (double)capacity, measurement->before_phi, measurement->exactly_at_phi, measurement->after_phi, at_or_before_phi, measurement->phi_references, within_percentage, (unsigned long long)measurement->negative_probes, measurement->negative_completed ? 1 : 0);
+}
+#endif
+
+/// Builds one Elastic table and compares three lookup sequences against the same placements
+static int run_loaded_elastic_lookup_comparison(const WordList* wordlist, const char* dataset, const int capacity, const float delta, const uint8_t seed[SIPHASH_2_4_KEY_SIZE], const bool csv_output) {
+#if !defined(HASHMAP_COUNT_PROBES) || !HASHMAP_COUNT_PROBES
+    (void)wordlist;
+    (void)dataset;
+    (void)capacity;
+    (void)delta;
+    (void)seed;
+    (void)csv_output;
+    fprintf(stderr, "Elastic lookup comparison requires the HashMapsProbes target\n");
+    return 1;
+#else
+    ElasticHashmap* hashmap = calloc(1, sizeof(ElasticHashmap));
+    Element** elements = create_elements(wordlist);
+    if (hashmap == NULL || elements == NULL) {
+        free(hashmap);
+        delete_unconsumed_elements(elements, wordlist->size);
+        return 2;
+    }
+    *hashmap = (ElasticHashmap){.capacity = capacity, .size = 0, .table = calloc((size_t)capacity, sizeof(Element*))};
+    if (hashmap->table == NULL) {
+        free(hashmap);
+        delete_unconsumed_elements(elements, wordlist->size);
+        return 2;
+    }
+
+    batch_insert(hashmap, delta, elements, seed);
+    bool success = hashmap->size == (int)wordlist->size;
+    for (size_t i = 0; i < wordlist->size; i++) {
+        success = success && elements[i] == NULL;
+    }
+    const ElasticHashmapProbeStats insertion_stats = elastic_hashmap_probe_stats(hashmap);
+
+    const int subarray_count = n_elastic_subarrays(capacity);
+    ElasticSubArray* subarrays = success ? partition_elastic_hashmap(capacity) : NULL;
+    int* positions = success ? elastic_positions_by_value(hashmap, wordlist->size) : NULL;
+    uint64_t* placement_phi = success ? calloc(wordlist->size, sizeof(uint64_t)) : NULL;
+    char* missing_word = success ? choose_missing_word(wordlist) : NULL;
+    if (subarrays == NULL || positions == NULL || placement_phi == NULL || missing_word == NULL) {
+        success = false;
+    }
+    if (success) {
+        for (size_t i = 0; i < wordlist->size; i++) {
+            if (positions[i] < 0) {
+                success = false;
+                break;
+            }
+            placement_phi[i] = elastic_placement_phi(wordlist->words[i], positions[i], subarrays, subarray_count, seed);
+            if (placement_phi[i] == 0) {
+                success = false;
+                break;
+            }
+        }
+    }
+
+    if (csv_output) {
+        print_elastic_lookup_comparison_csv_header();
+    } else {
+        print_elastic_lookup_comparison_header(dataset, capacity, wordlist->size, delta, &insertion_stats);
+    }
+
+    const ElasticLookupComparisonMethod methods[] = {ElasticLookupPhiAware, ElasticLookupFullTable, ElasticLookupDoubleHash};
+    for (size_t method_index = 0; success && method_index < sizeof(methods) / sizeof(methods[0]); method_index++) {
+        const ElasticLookupComparisonMethod method = methods[method_index];
+        ElasticLookupComparisonMeasurement measurement = {.method = elastic_lookup_method_name(method), .insertion_operations = insertion_stats.insertion_ops, .insertion_probes = insertion_stats.insertion_probes, .insertion_maximum = insertion_stats.maximum_insertion_probes, .phi_references = wordlist->size};
+        for (size_t i = 0; i < wordlist->size; i++) {
+            const ElasticLookupResult lookup = run_comparison_lookup(hashmap, method, wordlist->words[i], seed);
+            if (!lookup.completed || is_none(lookup.element.option) || lookup.element.element_p->value != (int)i) {
+                success = false;
+                break;
+            }
+            measurement.found++;
+            measurement.positive_probes += lookup.probes;
+            measurement.positive_maximum = lookup.probes > measurement.positive_maximum ? lookup.probes : measurement.positive_maximum;
+            if (lookup.probes < placement_phi[i]) {
+                measurement.before_phi++;
+            } else if (lookup.probes == placement_phi[i]) {
+                measurement.exactly_at_phi++;
+            } else {
+                measurement.after_phi++;
+            }
+        }
+
+        if (success && method == ElasticLookupPhiAware && measurement.after_phi != 0) {
+            success = false;
+        }
+
+        if (success) {
+            const ElasticLookupResult negative_lookup = run_comparison_lookup(hashmap, method, missing_word, seed);
+            measurement.negative_probes = negative_lookup.probes;
+            measurement.negative_completed = negative_lookup.completed && is_none(negative_lookup.element.option);
+            success = measurement.negative_completed;
+        }
+
+        if (csv_output) {
+            print_elastic_lookup_comparison_csv_measurement(&measurement, dataset, wordlist->size, capacity, delta);
+        } else {
+            print_elastic_lookup_comparison_measurement(&measurement, wordlist->size, capacity);
+        }
+    }
+
+    free(missing_word);
+    free(placement_phi);
+    free(positions);
+    free(subarrays);
+    delete_unconsumed_elements(elements, wordlist->size);
+    delete_elastic_hashmap(hashmap);
+    if (!success) {
+        fprintf(stderr, "Elastic lookup comparison failed\n");
+        return 3;
+    }
+    return 0;
+#endif
 }
 
 /// Runs insertion and positive and negative lookup checks on Elastic Hashing
@@ -1352,6 +1641,57 @@ int run_wordlist_load_sweep(const char* path, const int maximum_capacity, const 
 
 int run_wordlist_load_sweep_csv(const char* path, const int maximum_capacity, const WordlistHashmapMode mode, const uint8_t seed[SIPHASH_2_4_KEY_SIZE]) {
     return run_wordlist_load_sweep_with_output(path, maximum_capacity, mode, seed, BenchmarkCsv);
+}
+
+/// Selects the largest power-of-two comparison capacity supported by one wordlist and delta
+static int elastic_lookup_comparison_capacity(const size_t word_count, const int maximum_capacity, const float delta) {
+    if (word_count == 0 || maximum_capacity <= 0) {
+        return 0;
+    }
+
+    int candidate = 1;
+    while (candidate <= maximum_capacity / 2) {
+        candidate *= 2;
+    }
+    while (candidate > 0 && (size_t)elastic_target_size(candidate, delta) > word_count) {
+        candidate /= 2;
+    }
+    return candidate;
+}
+
+/// Loads one wordlist and selects the prefix used by the Elastic lookup comparison
+static int run_wordlist_elastic_lookup_comparison_with_output(const char* path, const int maximum_capacity, const float delta, const uint8_t seed[SIPHASH_2_4_KEY_SIZE], const bool csv_output) {
+    if (path == NULL || maximum_capacity <= 0 || !isfinite(delta) || delta <= 0.0f || delta >= 1.0f || seed == NULL) {
+        fprintf(stderr, "invalid Elastic lookup comparison arguments\n");
+        return 1;
+    }
+
+    WordList wordlist = {0};
+    if (!load_unique_words(path, &wordlist)) {
+        delete_wordlist(&wordlist);
+        fprintf(stderr, "could not load comparison wordlist\n");
+        return 2;
+    }
+    const int capacity = elastic_lookup_comparison_capacity(wordlist.size, maximum_capacity, delta);
+    if (capacity == 0) {
+        delete_wordlist(&wordlist);
+        fprintf(stderr, "wordlist does not contain enough unique keys for the comparison\n");
+        return 3;
+    }
+
+    WordList prefix = wordlist;
+    prefix.size = (size_t)elastic_target_size(capacity, delta);
+    const int result = run_loaded_elastic_lookup_comparison(&prefix, path, capacity, delta, seed, csv_output);
+    delete_wordlist(&wordlist);
+    return result;
+}
+
+int run_wordlist_elastic_lookup_comparison(const char* path, const int maximum_capacity, const float delta, const uint8_t seed[SIPHASH_2_4_KEY_SIZE]) {
+    return run_wordlist_elastic_lookup_comparison_with_output(path, maximum_capacity, delta, seed, false);
+}
+
+int run_wordlist_elastic_lookup_comparison_csv(const char* path, const int maximum_capacity, const float delta, const uint8_t seed[SIPHASH_2_4_KEY_SIZE]) {
+    return run_wordlist_elastic_lookup_comparison_with_output(path, maximum_capacity, delta, seed, true);
 }
 
 /// Builds the deterministic generated wordlist shared by demos and sweeps
