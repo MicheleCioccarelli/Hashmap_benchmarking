@@ -119,7 +119,7 @@ static void print_usage(const char* program_name) {
     fprintf(stderr, "       %s --csv-wordlist <wordlist> <standard|elastic|funnel|both|funnel-control|all> [delta] [32-hex-digit-seed]\n", name);
     fprintf(stderr, "       %s --demo <standard|elastic|funnel|both|funnel-control|all> [delta] [32-hex-digit-seed]\n", name);
     fprintf(stderr, "       %s --c-sweep [delta] [32-hex-digit-seed]\n", name);
-    fprintf(stderr, "       %s --csv-load-sweep <standard|elastic|funnel|both|funnel-control|all> [32-hex-digit-seed]\n", name);
+    fprintf(stderr, "       %s --csv-load-sweep <standard|elastic|funnel|both|funnel-control|all> [capacity] [32-hex-digit-seed]\n", name);
     fprintf(stderr, "       %s --csv-c-sweep [delta] [32-hex-digit-seed]\n", name);
     fprintf(stderr, "       %s --elastic-lookup-comparison <wordlist> [maximum-capacity] [delta] [32-hex-digit-seed]\n", name);
     fprintf(stderr, "       %s --csv-elastic-lookup-comparison <wordlist> [maximum-capacity] [delta] [32-hex-digit-seed]\n", name);
@@ -225,7 +225,9 @@ int run_benchmark_cli(const int argc, char** argv) {
     }
 
     if (argc >= 2 && strcmp(argv[1], "--csv-load-sweep") == 0) {
-        if (argc < 3 || argc > 4) {
+        // --csv-load-sweep <mode> [capacity] [seed]
+        // capacity is optional so that the scaling study can sweep n without a wordlist
+        if (argc < 3 || argc > 5) {
             print_usage(argc > 0 ? argv[0] : NULL);
             return 1;
         }
@@ -234,13 +236,24 @@ int run_benchmark_cli(const int argc, char** argv) {
             print_usage(argv[0]);
             return 1;
         }
+        int capacity = DEFAULT_LOAD_SWEEP_CAPACITY;
+        int next_argument = 3;
+        if (argc > 3 && argv[3][0] != '\0' && strspn(argv[3], "0123456789") == strlen(argv[3])) {
+            const long parsed = strtol(argv[3], NULL, 10);
+            if (parsed <= 0 || parsed > INT_MAX) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            capacity = (int)parsed;
+            next_argument = 4;
+        }
         uint8_t seed[SIPHASH_2_4_KEY_SIZE];
         memcpy(seed, DEFAULT_BENCHMARK_SEED, sizeof(seed));
-        if (argc == 4 && !parse_seed_hex(argv[3], seed)) {
+        if (argc > next_argument && !parse_seed_hex(argv[next_argument], seed)) {
             print_usage(argv[0]);
             return 1;
         }
-        return run_generated_load_sweep_csv(DEFAULT_LOAD_SWEEP_CAPACITY, mode, seed);
+        return run_generated_load_sweep_csv(capacity, mode, seed);
     }
 
     if (argc < 3 || argc > 5) {

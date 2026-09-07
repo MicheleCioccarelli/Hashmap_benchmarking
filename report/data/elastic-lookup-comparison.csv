@@ -1,0 +1,4 @@
+method,dataset,capacity,keys,delta,insertion_operations,insertion_probes,insertion_probe_average,insertion_probe_maximum,found,positive_probes,positive_probe_average,positive_probe_maximum,positive_average_over_capacity,before_phi,exactly_at_phi,after_phi,at_or_before_phi,phi_references,at_or_before_phi_percentage,negative_probes,negative_completed
+phi-aware,"english.txt",4096,3584,0.125000000,3584,10374,2.894531250,85,3584,782699,218.386997768,17564,0.053317138,157,3427,0,3584,3584,100.000000000,32570,1
+full-table-siphash,"english.txt",4096,3584,0.125000000,3584,10374,2.894531250,85,3584,9953525,2777.211216518,26370,0.678030082,163,1256,2165,1419,3584,39.592633929,32570,1
+modular-double-hash,"english.txt",4096,3584,0.125000000,3584,10374,2.894531250,85,3584,7259225,2025.453404018,4096,0.494495460,229,0,3355,229,3584,6.389508929,4096,1

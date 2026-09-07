@@ -1,0 +1,13 @@
+
+Elastic table: n=16384  delta=1/8  keys=14336  subarrays=14  (c=100)
+
+  lookup model               avg probes        max   missed   time (s)
+  ------------------------ ------------ ---------- -------- ----------
+  phi-aware (shipped)            298.83      60141        0      0.133
+  image-only (proposed)           18.13        596        0      0.016
+  (i,j) scan, j<=|Ai|             14.87        243        0      0.007
+  (i,j) scan, j<=8|Ai|            14.87        243        0      0.007
+  full-table SipHash % n       10635.31     130541        2      3.797
+
+  ratio to phi-aware:  image-only (proposed) = 0.06x  (i,j) scan, j<=|Ai| = 0.05x  (i,j) scan, j<=8|Ai| = 0.05x  full-table SipHash % n = 35.59x
+

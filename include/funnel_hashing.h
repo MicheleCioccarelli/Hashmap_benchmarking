@@ -67,6 +67,8 @@ typedef struct Funnel_C {
 typedef struct Funnel_Ci_bucket {
     int subarray_number;
     int starting_index;
+    // Physical slots in this bucket, at least c_bucket_length and at most one more
+    int length;
     // How many of the key spots are occupied
     int size;
 } Funnel_Ci_bucket;
@@ -84,9 +86,9 @@ typedef struct FunnelPartition {
     int a_alpha_plus_one_length;
     // ceil(log2(log2(capacity))) probes are attempted in B
     int b_probe_limit;
-    // target size ceil(2log2(log2(capacity))) for every bucket in C
+    // Minimum size ceil(2log2(log2(capacity))) of every bucket in C
     int c_bucket_length;
-    // Number of equal c_bucket_length buckets covering C
+    // Number of buckets covering C, each of c_bucket_length slots or one more
     int c_bucket_count;
 
     // alpha descriptions covering A' without separate bucket allocations

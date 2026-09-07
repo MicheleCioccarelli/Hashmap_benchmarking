@@ -1,0 +1,227 @@
+Conformance of the implementation to the paper's specification
+Farach-Colton, Krapivin, Kuszmaul, arXiv:2501.02305
+=============================================================
+
+ELASTIC HASHING, Section 2
+  [PASS] |A_{i+1}| = |A_i|/2 +- 1                        Section 2, 'The algorithm'
+  [PASS] subarray lengths sum to n                       Section 2, footnote 1
+  [PASS] every subarray is non-empty                     implied by the construction
+  [PASS] number of subarrays is ceil(log2 n)             Section 2, 'The algorithm'
+
+ELASTIC HASHING, Lemma 1 (the injection phi)
+  [PASS] phi is injective                                Lemma 1
+  [PASS] phi(i,j) is never zero                          Lemma 1
+  [PASS] phi(i,j) <= 16 i j^2                            Lemma 1, log2 phi <= log2 i + 2log2 j + O(1)
+         worst phi(i,j)/(i j^2) = 14.67 at (i=1, j=2048); the proof gives < 16
+
+ELASTIC HASHING, insertion
+  [PASS] all n - floor(delta n) keys are inserted        Section 2
+         n=4096 delta=1/8: inserted 3584 of 3584
+  [PASS] each settled A_j holds |A_j| - floor(d|A_j|/2)  Section 2
+         A_1..A_3 at |A_i| - floor(d|A_i|/2); A_4 holds the remaining 224; nothing past it
+  [PASS] batch B_0 fills A_1 to ceil(0.75|A_1|)          Section 2
+         batch zero inserted 1536, expected ceil(0.75*|A_1|) = 1536
+  [PASS] every insertion is accounted to B_0 or a case   Section 2, three cases
+         B0 1536 + case1 704 + case2 1344 + case3 0 = 3584, size = 3584
+  [PASS] all n - floor(delta n) keys are inserted        Section 2
+         n=16384 delta=1/32: inserted 15872 of 15872
+  [PASS] each settled A_j holds |A_j| - floor(d|A_j|/2)  Section 2
+         A_1..A_5 at |A_i| - floor(d|A_i|/2); A_6 holds the remaining 248; nothing past it
+  [PASS] batch B_0 fills A_1 to ceil(0.75|A_1|)          Section 2
+         batch zero inserted 6144, expected ceil(0.75*|A_1|) = 6144
+  [PASS] every insertion is accounted to B_0 or a case   Section 2, three cases
+         B0 6144 + case1 3776 + case2 5952 + case3 0 = 15872, size = 15872
+  [PASS] all n - floor(delta n) keys are inserted        Section 2
+         n=65536 delta=1/256: inserted 65280 of 65280
+  [PASS] each settled A_j holds |A_j| - floor(d|A_j|/2)  Section 2
+         A_1..A_8 at |A_i| - floor(d|A_i|/2); A_9 holds the remaining 127; nothing past it
+  [PASS] batch B_0 fills A_1 to ceil(0.75|A_1|)          Section 2
+         batch zero inserted 24576, expected ceil(0.75*|A_1|) = 24576
+  [PASS] every insertion is accounted to B_0 or a case   Section 2, three cases
+         B0 24576 + case1 16242 + case2 24462 + case3 0 = 65280, size = 65280
+
+FUNNEL HASHING, Section 3   (n=65536, delta=1/8)
+  [PASS] alpha = ceil(4 log2 delta^-1) + 10              Section 3
+         alpha = 22, expected ceil(4 log2(1/delta)) + 10 = 22
+  [PASS] beta = ceil(2 log2 delta^-1)                    Section 3
+         beta = 6, expected ceil(2 log2(1/delta)) = 6
+  [PASS] ceil(dn/2) <= |A_(alpha+1)| <= floor(3dn/4)     Section 3
+         |A_(alpha+1)| = 4096, allowed range [4096, 6144]
+  [PASS] |A'| divisible by beta                          Section 3
+         |A'| = 61440, beta = 6, remainder 0
+  [PASS] a_(i+1) = 3 a_i / 4 +- 1                        Section 3
+  [PASS] the A_i cover A' exactly                        Section 3
+         sum of buckets = 10240, |A'|/beta = 10240
+  [PASS] B makes log log n attempts                      Section 3
+         B probe limit = 4, expected ceil(log2 log2 n) = 4
+  [PASS] C buckets hold 2 log log n slots                Section 3
+         C bucket length = 8, expected ceil(2 log2 log2 n) = 8
+  [PASS] sum_{j>i} |A_j| > 2.5 |A_i| for i in [alpha-10]  Section 3
+         holds for all 12 values of i in [alpha-10]
+  [PASS] |B| >= delta n / 4                              Section 3
+         |B| = 2048, delta n / 4 = 2048.0
+  [PASS] C's buckets tile C exactly                      Section 3
+         256 buckets covering 2048 slots, |C| = 2048, lengths in [8, 8], 2 log log n = 8
+  [PASS] A', B and C partition the table                 Section 3
+         A' [0,61440), B [61440,63488), C [63488,65536), n = 65536
+  [PASS] B and C have equal (+-1) length                 Section 3
+         |B| = 2048, |C| = 2048, difference 0
+
+FUNNEL HASHING, Section 3   (n=65536, delta=1/32)
+  [PASS] alpha = ceil(4 log2 delta^-1) + 10              Section 3
+         alpha = 30, expected ceil(4 log2(1/delta)) + 10 = 30
+  [PASS] beta = ceil(2 log2 delta^-1)                    Section 3
+         beta = 10, expected ceil(2 log2(1/delta)) = 10
+  [PASS] ceil(dn/2) <= |A_(alpha+1)| <= floor(3dn/4)     Section 3
+         |A_(alpha+1)| = 1026, allowed range [1024, 1536]
+  [PASS] |A'| divisible by beta                          Section 3
+         |A'| = 64510, beta = 10, remainder 0
+  [PASS] a_(i+1) = 3 a_i / 4 +- 1                        Section 3
+  [PASS] the A_i cover A' exactly                        Section 3
+         sum of buckets = 6451, |A'|/beta = 6451
+  [PASS] B makes log log n attempts                      Section 3
+         B probe limit = 4, expected ceil(log2 log2 n) = 4
+  [PASS] C buckets hold 2 log log n slots                Section 3
+         C bucket length = 8, expected ceil(2 log2 log2 n) = 8
+  [PASS] sum_{j>i} |A_j| > 2.5 |A_i| for i in [alpha-10]  Section 3
+         holds for all 20 values of i in [alpha-10]
+  [PASS] |B| >= delta n / 4                              Section 3
+         |B| = 513, delta n / 4 = 512.0
+  [PASS] C's buckets tile C exactly                      Section 3
+         64 buckets covering 513 slots, |C| = 513, lengths in [8, 9], 2 log log n = 8
+  [PASS] A', B and C partition the table                 Section 3
+         A' [0,64510), B [64510,65023), C [65023,65536), n = 65536
+  [PASS] B and C have equal (+-1) length                 Section 3
+         |B| = 513, |C| = 513, difference 0
+
+FUNNEL HASHING, Section 3   (n=262144, delta=1/256)
+  [PASS] alpha = ceil(4 log2 delta^-1) + 10              Section 3
+         alpha = 42, expected ceil(4 log2(1/delta)) + 10 = 42
+  [PASS] beta = ceil(2 log2 delta^-1)                    Section 3
+         beta = 16, expected ceil(2 log2(1/delta)) = 16
+  [PASS] ceil(dn/2) <= |A_(alpha+1)| <= floor(3dn/4)     Section 3
+         |A_(alpha+1)| = 512, allowed range [512, 768]
+  [PASS] |A'| divisible by beta                          Section 3
+         |A'| = 261632, beta = 16, remainder 0
+  [PASS] a_(i+1) = 3 a_i / 4 +- 1                        Section 3
+  [PASS] the A_i cover A' exactly                        Section 3
+         sum of buckets = 16352, |A'|/beta = 16352
+  [PASS] B makes log log n attempts                      Section 3
+         B probe limit = 5, expected ceil(log2 log2 n) = 5
+  [PASS] C buckets hold 2 log log n slots                Section 3
+         C bucket length = 9, expected ceil(2 log2 log2 n) = 9
+  [PASS] sum_{j>i} |A_j| > 2.5 |A_i| for i in [alpha-10]  Section 3
+         holds for all 32 values of i in [alpha-10]
+  [PASS] |B| >= delta n / 4                              Section 3
+         |B| = 256, delta n / 4 = 256.0
+  [PASS] C's buckets tile C exactly                      Section 3
+         28 buckets covering 256 slots, |C| = 256, lengths in [9, 10], 2 log log n = 9
+  [PASS] A', B and C partition the table                 Section 3
+         A' [0,261632), B [261632,261888), C [261888,262144), n = 262144
+  [PASS] B and C have equal (+-1) length                 Section 3
+         |B| = 256, |C| = 256, difference 0
+
+FUNNEL HASHING, Section 3   (n=16384, delta=1/128)
+  [PASS] alpha = ceil(4 log2 delta^-1) + 10              Section 3
+         alpha = 38, expected ceil(4 log2(1/delta)) + 10 = 38
+  [PASS] beta = ceil(2 log2 delta^-1)                    Section 3
+         beta = 14, expected ceil(2 log2(1/delta)) = 14
+  [PASS] ceil(dn/2) <= |A_(alpha+1)| <= floor(3dn/4)     Section 3
+         |A_(alpha+1)| = 74, allowed range [64, 96]
+  [PASS] |A'| divisible by beta                          Section 3
+         |A'| = 16310, beta = 14, remainder 0
+  [PASS] a_(i+1) = 3 a_i / 4 +- 1                        Section 3
+  [PASS] the A_i cover A' exactly                        Section 3
+         sum of buckets = 1165, |A'|/beta = 1165
+  [PASS] B makes log log n attempts                      Section 3
+         B probe limit = 4, expected ceil(log2 log2 n) = 4
+  [PASS] C buckets hold 2 log log n slots                Section 3
+         C bucket length = 8, expected ceil(2 log2 log2 n) = 8
+  [PASS] sum_{j>i} |A_j| > 2.5 |A_i| for i in [alpha-10]  Section 3
+         holds for all 28 values of i in [alpha-10]
+  [PASS] |B| >= delta n / 4                              Section 3
+         |B| = 37, delta n / 4 = 32.0
+  [PASS] C's buckets tile C exactly                      Section 3
+         4 buckets covering 37 slots, |C| = 37, lengths in [9, 10], 2 log log n = 8
+  [PASS] A', B and C partition the table                 Section 3
+         A' [0,16310), B [16310,16347), C [16347,16384), n = 16384
+  [PASS] B and C have equal (+-1) length                 Section 3
+         |B| = 37, |C| = 37, difference 0
+
+FUNNEL HASHING, Section 3   (n=131072, delta=1/8)
+  [PASS] alpha = ceil(4 log2 delta^-1) + 10              Section 3
+         alpha = 22, expected ceil(4 log2(1/delta)) + 10 = 22
+  [PASS] beta = ceil(2 log2 delta^-1)                    Section 3
+         beta = 6, expected ceil(2 log2(1/delta)) = 6
+  [PASS] ceil(dn/2) <= |A_(alpha+1)| <= floor(3dn/4)     Section 3
+         |A_(alpha+1)| = 8192, allowed range [8192, 12288]
+  [PASS] |A'| divisible by beta                          Section 3
+         |A'| = 122880, beta = 6, remainder 0
+  [PASS] a_(i+1) = 3 a_i / 4 +- 1                        Section 3
+  [PASS] the A_i cover A' exactly                        Section 3
+         sum of buckets = 20480, |A'|/beta = 20480
+  [PASS] B makes log log n attempts                      Section 3
+         B probe limit = 5, expected ceil(log2 log2 n) = 5
+  [PASS] C buckets hold 2 log log n slots                Section 3
+         C bucket length = 9, expected ceil(2 log2 log2 n) = 9
+  [PASS] sum_{j>i} |A_j| > 2.5 |A_i| for i in [alpha-10]  Section 3
+         holds for all 12 values of i in [alpha-10]
+  [PASS] |B| >= delta n / 4                              Section 3
+         |B| = 4096, delta n / 4 = 4096.0
+  [PASS] C's buckets tile C exactly                      Section 3
+         455 buckets covering 4096 slots, |C| = 4096, lengths in [9, 10], 2 log log n = 9
+  [PASS] A', B and C partition the table                 Section 3
+         A' [0,122880), B [122880,126976), C [126976,131072), n = 131072
+  [PASS] B and C have equal (+-1) length                 Section 3
+         |B| = 4096, |C| = 4096, difference 0
+
+FUNNEL HASHING, a populated table   (n=65536, delta=1/8)
+  [PASS] every key is placed, no table failure           Section 3
+         n=65536 delta=1/8: inserted 57344 of 57344
+  [PASS] insertion probes <= alpha*beta + f(A_(alpha+1))  Section 3
+         worst insertion used 61 probes, ceiling alpha*beta + loglogn + 2*2loglogn = 152
+  [PASS] C buckets are prefix filled                     Section 3
+         all 256 C buckets are filled from slot 0 upward
+  [PASS] every inserted key is retrievable               Section 3
+         57344 of 57344 keys retrieved by replaying the probe sequence
+  [PASS] absent keys are reported absent                 Section 3
+         20000 absent keys, 0 reported present
+
+FUNNEL HASHING, a populated table   (n=65536, delta=1/32)
+  [PASS] every key is placed, no table failure           Section 3
+         n=65536 delta=1/32: inserted 63488 of 63488
+  [PASS] insertion probes <= alpha*beta + f(A_(alpha+1))  Section 3
+         worst insertion used 152 probes, ceiling alpha*beta + loglogn + 2*2loglogn = 322
+  [PASS] C buckets are prefix filled                     Section 3
+         all 64 C buckets are filled from slot 0 upward
+  [PASS] every inserted key is retrievable               Section 3
+         63488 of 63488 keys retrieved by replaying the probe sequence
+  [PASS] absent keys are reported absent                 Section 3
+         20000 absent keys, 0 reported present
+
+FUNNEL HASHING, a populated table   (n=262144, delta=1/256)
+  [PASS] every key is placed, no table failure           Section 3
+         n=262144 delta=1/256: inserted 261120 of 261120
+  [PASS] insertion probes <= alpha*beta + f(A_(alpha+1))  Section 3
+         worst insertion used 347 probes, ceiling alpha*beta + loglogn + 2*2loglogn = 697
+  [PASS] C buckets are prefix filled                     Section 3
+         all 28 C buckets are filled from slot 0 upward
+  [PASS] every inserted key is retrievable               Section 3
+         261120 of 261120 keys retrieved by replaying the probe sequence
+  [PASS] absent keys are reported absent                 Section 3
+         20000 absent keys, 0 reported present
+
+FUNNEL HASHING, a populated table   (n=131072, delta=1/8)
+  [PASS] every key is placed, no table failure           Section 3
+         n=131072 delta=1/8: inserted 114688 of 114688
+  [PASS] insertion probes <= alpha*beta + f(A_(alpha+1))  Section 3
+         worst insertion used 62 probes, ceiling alpha*beta + loglogn + 2*2loglogn = 157
+  [PASS] C buckets are prefix filled                     Section 3
+         all 455 C buckets are filled from slot 0 upward
+  [PASS] every inserted key is retrievable               Section 3
+         114688 of 114688 keys retrieved by replaying the probe sequence
+  [PASS] absent keys are reported absent                 Section 3
+         20000 absent keys, 0 reported present
+
+=============================================================
+104 checks, 0 failures

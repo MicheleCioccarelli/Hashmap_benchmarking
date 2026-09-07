@@ -230,3 +230,49 @@ Un seed alternativo e una stringa di 32 cifre esadecimali. Va registrato insieme
 ```
 ./cmake-build-release/HashMapsProbes --csv-load-sweep all 101112131415161718191a1b1c1d1e1f
 ```
+
+
+## Riprodurre i numeri della relazione
+
+Un solo script ricostruisce tutte le misure della sezione Results:
+
+```
+./reproduce_benchmarks.sh [output_dir] [wordlist]
+```
+
+Ricompila entrambi i target, stampa ogni comando prima di eseguirlo, scrive i CSV nella
+directory indicata (default `report/data`) e produce una tabella riassuntiva confrontabile riga
+per riga con le tabelle della relazione.
+
+I grafici della relazione leggono blocchi di dati incorporati in cima al `.tex`, non i file su
+disco, cosi il sorgente resta autonomo e compila su Overleaf. Dopo aver rifatto i benchmark
+vanno rigenerati:
+
+```
+./tools/embed_data.sh
+```
+
+Senza questo passaggio i grafici continuano a mostrare i numeri vecchi.
+
+Ogni run e determinato dalla tripla (wordlist, delta, seed SipHash a 128 bit). Il seed compare
+in ogni riga di output e vale `000102030405060708090a0b0c0d0e0f` di default, quindi due
+esecuzioni con gli stessi argomenti danno gli stessi numeri.
+
+
+## Test
+
+I test non fanno parte dei due target di benchmark e si compilano singolarmente. Il piu
+importante e la suite di conformita, che percorre la specifica del paper clausola per clausola
+e la verifica sulle strutture che il codice costruisce davvero:
+
+```
+cc -std=c11 -O2 -DHASHMAP_COUNT_PROBES=1 -Iinclude -Isrc -Ithird_party \
+   $(find src -name '*.c' ! -name 'main.c') third_party/siphash.c \
+   tests/conformance_to_paper.c -o /tmp/conformance && /tmp/conformance
+```
+
+Stampa `104 checks, 0 failures`. Senza `-DHASHMAP_COUNT_PROBES=1` i controlli sono 98: sei
+dipendono dai contatori. La stessa riga di compilazione funziona per gli altri programmi in
+`tests/`, fra cui `compare_lookup_models.c` (confronto fra il lookup phi-aware e la scansione
+per livelli), `measure_phi_distribution.c` (media di phi e distribuzione dei piazzamenti) e
+`scan_negative_queries.c` (costo delle query negative della scansione per livelli).

@@ -6,10 +6,54 @@ ELASTIC_LOOKUP_EXPLANATION.md
 ELASTIC_HASHING_REPORT.md
 FUNNEL_HASHING_REPORT.md
 WORDLIST_RUNNER_REPORT.md
-IMPLEMENTATION_AUDIT.md
-PROFESSOR_UPDATE.md
+IMPLEMENTATION_PROFESSOR_UPDATE.md
 elastic_benchmark_report.txt
 funnel_benchmark_report.txt
 proposals.md
-tests/
 benchmark-results/
+
+# LaTeX build artifacts (report.tex is tracked, its output is not)
+*.aux
+*.log
+*.out
+*.toc
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+report.pdf
+# generated at compile time by filecontents in report.tex
+/csweep.dat
+/lookupmodels.dat
+/phivsmeasured.dat
+/wl-*.dat
+
+# compiled one-off measurement binaries
+build-measure/
+build_measurements.sh
+
+# superseded drafts of the report, kept locally only
+report/report.tex
+report/report.pdf
+report/relazione.tex
+report/relazione.pdf
+report/benchmarks.tex
+report/benchmarks.pdf
+report/presentation.pdf
+report/overleaf.zip
+report/*.log
+report/*.aux
+report/*.out
+report/*.toc
+Professor_Update.tex
+Professor_Update.pdf
+chromium.txt
+
+# documentation: the repository ships one README and nothing else
+*.md
+!README.md
+REVIEW.diff
+
+# scratch markers left by the measurement scripts
+report/outputs/lookupdone
+report/outputs/progress
+report/outputs/regen_done

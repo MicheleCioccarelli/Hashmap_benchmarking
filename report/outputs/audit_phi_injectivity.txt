@@ -1,0 +1,3 @@
+phi injective over i<=24, j<=4000 (96000 pairs): YES (0 duplicates)
+phi(i,j)==0 anywhere: no (0)
+zero-length or non-covering partitions for cap 1..200000: none

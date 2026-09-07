@@ -1,0 +1,10 @@
+n=4096    d=1/8    | mean phi=    407.3  mean rank=   16.9  ratio= 24.1 | max phi=120275     max rank=685
+n=4096    d=1/256  | mean phi=   6829.9  mean rank=   41.0  ratio=166.4 | max phi=3914413    max rank=4314
+n=8192    d=1/8    | mean phi=    376.8  mean rank=   17.2  ratio= 22.0 | max phi=120794     max rank=760
+n=8192    d=1/256  | mean phi=   8941.5  mean rank=   43.2  ratio=206.9 | max phi=15712164   max rank=9500
+n=16384   d=1/8    | mean phi=    365.2  mean rank=   18.1  ratio= 20.1 | max phi=61165      max rank=596
+n=16384   d=1/256  | mean phi=   8785.3  mean rank=   46.1  ratio=190.7 | max phi=7822714    max rank=6687
+n=32768   d=1/8    | mean phi=    382.4  mean rank=   19.1  ratio= 20.1 | max phi=120818     max rank=846
+n=32768   d=1/256  | mean phi=   8137.9  mean rank=   47.4  ratio=171.5 | max phi=15379428   max rank=9238
+n=65536   d=1/8    | mean phi=    384.7  mean rank=   19.5  ratio= 19.7 | max phi=120787     max rank=866
+n=65536   d=1/256  | mean phi=   9873.4  mean rank=   51.3  ratio=192.4 | max phi=15712182   max rank=10896

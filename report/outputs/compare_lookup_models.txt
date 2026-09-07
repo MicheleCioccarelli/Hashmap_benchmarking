@@ -1,0 +1,18 @@
+n=65536 delta=0.125 keys=57344 subarrays=16
+lookup model                found   MISSED   avg probes        max
+(i,j) scan, j <= |Ai|       57344        0        14.44        222
+(i,j) scan, j <= 8|Ai|      57344        0        14.44        222
+phi-aware (this work)       57344        0       351.28     120154
+
+n=65536 delta=0.0078125 keys=65024 subarrays=16
+lookup model                found   MISSED   avg probes        max
+(i,j) scan, j <= |Ai|       65024        0       253.45       4098
+(i,j) scan, j <= 8|Ai|      65024        0       253.66       4098
+phi-aware (this work)       65024        0      1384.36     278921
+
+n=65536 delta=0.00390625 keys=65280 subarrays=16
+lookup model                found   MISSED   avg probes        max
+(i,j) scan, j <= |Ai|       65277        3       508.59       8380
+(i,j) scan, j <= 8|Ai|      65280        0       514.46      10416
+phi-aware (this work)       65280        0      1506.06     319765
+

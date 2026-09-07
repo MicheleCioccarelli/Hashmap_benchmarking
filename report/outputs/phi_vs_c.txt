@@ -1,0 +1,10 @@
+c=1      n=16384    d=1/8     keys=14336    | mean phi=        94.8  max phi=15028        | mean i= 1.73 mean j= 1.86 max j=25
+c=1      n=16384    d=1/256   keys=16320    | mean phi=      7569.1  max phi=16706532     | mean i= 1.98 mean j= 3.35 max j=959
+c=2      n=16384    d=1/8     keys=14336    | mean phi=       115.0  max phi=7547         | mean i= 1.73 mean j= 2.07 max j=25
+c=2      n=16384    d=1/256   keys=16320    | mean phi=       280.2  max phi=15092        | mean i= 1.98 mean j= 2.83 max j=25
+c=4      n=16384    d=1/8     keys=14336    | mean phi=       174.9  max phi=15028        | mean i= 1.72 mean j= 2.41 max j=25
+c=4      n=16384    d=1/256   keys=16320    | mean phi=       551.4  max phi=60069        | mean i= 1.98 mean j= 3.50 max j=32
+c=16     n=16384    d=1/8     keys=14336    | mean phi=       341.4  max phi=30682        | mean i= 1.72 mean j= 2.89 max j=46
+c=16     n=16384    d=1/256   keys=16320    | mean phi=      2037.1  max phi=961188       | mean i= 1.98 mean j= 4.74 max j=128
+c=100    n=16384    d=1/8     keys=14336    | mean phi=       365.2  max phi=61165        | mean i= 1.72 mean j= 2.93 max j=85
+c=100    n=16384    d=1/256   keys=16320    | mean phi=      8785.3  max phi=7822714      | mean i= 1.98 mean j= 5.93 max j=737

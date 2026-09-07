@@ -1,0 +1,10 @@
+n=4096    d=1/8    | image-only lookup: mean=  16.91  max=685     MISSED=0
+n=4096    d=1/256  | image-only lookup: mean=  41.04  max=4314    MISSED=0
+n=8192    d=1/8    | image-only lookup: mean=  17.16  max=760     MISSED=0
+n=8192    d=1/256  | image-only lookup: mean=  43.22  max=9500    MISSED=0
+n=16384   d=1/8    | image-only lookup: mean=  18.13  max=596     MISSED=0
+n=16384   d=1/256  | image-only lookup: mean=  46.07  max=6687    MISSED=0
+n=32768   d=1/8    | image-only lookup: mean=  19.07  max=846     MISSED=0
+n=32768   d=1/256  | image-only lookup: mean=  47.45  max=9238    MISSED=0
+n=65536   d=1/8    | image-only lookup: mean=  19.52  max=866     MISSED=0
+n=65536   d=1/256  | image-only lookup: mean=  51.30  max=10896   MISSED=0
