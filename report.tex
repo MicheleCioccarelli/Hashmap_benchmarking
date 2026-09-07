@@ -2117,13 +2117,9 @@ Four things, none of which is speed.
 % =====================================================================
 
 Both schemes were implemented in C on string keys, together with a linear-probing control
-table and a harness that counts the physical probes of every operation exactly. Every
-correctness check passes at every load factor tested, under AddressSanitizer and
-UndefinedBehaviorSanitizer, and a separate suite walks the paper clause by clause against the
-structures the code actually builds, 104 checks with no failures in the instrumented
-build (98 without the probe counters, which gate six of them).
+table and a harness that counts the physical probes of every operation exactly.
 
-Three measurements carry the report.
+Three measurements carry the report:
 
 \begin{enumerate}\itemsep0.9em
 

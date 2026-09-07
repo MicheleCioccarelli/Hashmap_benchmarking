@@ -57,3 +57,11 @@ REVIEW.diff
 report/outputs/lookupdone
 report/outputs/progress
 report/outputs/regen_done
+
+# course handouts and presentation build artifacts (no presentation source in the tree)
+*.pptx
+*.ppt
+report/presentation.*
+*.nav
+*.snm
+*.vrb
